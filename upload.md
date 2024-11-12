@@ -2,27 +2,23 @@
 layout: default
 title: Upload
 ---
+
 <h2>Authorize with Strava</h2>
 
-First login with Strava:
-<a href="https://www.strava.com/oauth/authorize?client_id={{ site.strava_client_id }}&response_type=code&redirect_uri=https://warm-mandazi-6b7218.netlify.app/.netlify/functions/strava-auth&scope=activity:write,read_all">
-  <button>Login with Strava</button>
-</a>
-
+<!-- Strava authorization button -->
+First, login with Strava:
+<button onclick="authorizeWithStrava()">Login with Strava</button>
 
 <h2>Upload a Workout Image</h2>
-Then select your image for upload
 <!-- Form to select an image file for upload -->
+Then, select your image for upload:
 <form id="uploadForm">
   <label for="imageInput">Choose an image:</label>
   <input type="file" id="imageInput" name="image" required>
   <button type="button" onclick="uploadImage()">Upload and Process Image</button>
 </form>
 
-<!-- Authorization button for Strava login -->
-
-
-<!-- Result display -->
+<!-- Result display area -->
 <div id="result"></div>
 
 <script>
@@ -68,7 +64,6 @@ Then select your image for upload
       window.history.replaceState({}, document.title, "/upload"); // Clean the URL
     }
   };
-
 
   async function uploadImage() {
     const imageInput = document.getElementById('imageInput').files[0];

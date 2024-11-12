@@ -12,20 +12,18 @@ title: Upload
 <div id="result"></div>
 
 <h3>Authorize with Strava</h3>
-<a href="https://www.strava.com/oauth/authorize?client_id={{ site.strava_client_id }}&response_type=code&redirect_uri={{ site.strava_redirect_uri }}&scope=activity:write,read_all">
-  <button>Login with Strava</button>
-</a>
+<button onclick="loginWithStrava()">Login with Strava</button>
 
 <script>
-  async function processImage() {
-    const imageUrl = document.getElementById('imageUrl').value;
-    const response = await fetch('/.netlify/functions/process-image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageUrl })
-    });
-    const result = await response.json();
-    document.getElementById('result').innerText = JSON.stringify(result, null, 2);
+  function loginWithStrava() {
+    const clientId = "{{ process.env.STRAVA_CLIENT_ID }}";
+    const redirectUri = "https://warm-mandazi-6b7218.netlify.app/.netlify/functions/strava-auth";  // Replace with your actual redirect URI
+
+    // Construct the URL
+    const stravaUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=activity:write,read_all`;
+
+    // Redirect the user to the Strava authorization page
+    window.location.href = stravaUrl;
   }
 </script>
 

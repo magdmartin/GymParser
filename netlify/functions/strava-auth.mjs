@@ -1,3 +1,4 @@
+// netlify/functions/strava-auth.js
 import fetch from 'node-fetch';
 
 export async function handler(event, context) {
@@ -5,7 +6,6 @@ export async function handler(event, context) {
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
   const code = event.queryStringParameters.code;
 
-  // Exchange the authorization code for an access token
   const response = await fetch("https://www.strava.com/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -21,17 +21,10 @@ export async function handler(event, context) {
 
   if (response.ok) {
     return {
-      statusCode: 200,
-      headers: { "Content-Type": "text/html" },
-      body: `
-        <html>
-          <body>
-            <h1>Authorization Successful</h1>
-            <p>Access Token: ${data.access_token}</p>
-            <p>You can now use this token to upload your workout data to Strava.</p>
-          </body>
-        </html>
-      `
+      statusCode: 302,
+      headers: {
+        Location: `/upload?access_token=${data.access_token}`,
+      },
     };
   } else {
     return {
@@ -39,5 +32,5 @@ export async function handler(event, context) {
       body: JSON.stringify({ error: data })
     };
   }
-};
+}
 

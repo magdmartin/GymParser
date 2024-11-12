@@ -7,7 +7,8 @@ title: Upload
 
 <!-- Strava authorization button -->
 First, login with Strava:
-<button onclick="authorizeWithStrava()">Login with Strava</button>
+<button onclick="loginWithStrava()">Login with Strava</button>
+
 
 <h2>Upload a Workout Image</h2>
 <!-- Form to select an image file for upload -->
@@ -22,23 +23,19 @@ Then, select your image for upload:
 <div id="result"></div>
 
 <script>
-  // Function to fetch the Strava client ID securely from Netlify function
-  async function fetchClientId() {
-    try {
-      const response = await fetch('/.netlify/functions/get-strava-client-id');
-      const data = await response.json();
+  async function loginWithStrava() {
+    // Fetch the client ID from the Netlify function
+    const response = await fetch('/.netlify/functions/get-client-id');
+    const data = await response.json();
+    const clientId = data.clientId;
+    const redirectUri = "https://warm-mandazi-6b7218.netlify.app/.netlify/functions/strava-auth";
 
-      if (response.ok && data.clientId) {
-        return data.clientId;
-      } else {
-        throw new Error("Failed to fetch client ID");
-      }
-    } catch (error) {
-      console.error("Error fetching client ID:", error);
-      document.getElementById('result').innerText = "Error fetching Strava client ID.";
-    }
+    // Construct the Strava URL
+    const stravaUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=activity:write,read_all`;
+
+    // Redirect to Strava authorization
+    window.location.href = stravaUrl;
   }
-
   // Function to initiate Strava authorization
   async function authorizeWithStrava() {
     const clientId = await fetchClientId();

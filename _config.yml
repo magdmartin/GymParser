@@ -23,7 +23,6 @@ email: your-email@example.com
 description: An app to help track gym activities and parse workout data
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
-strava_client_id: ENV["STRAVA_CLIENT_ID"]  # Placeholder that Netlify can replace
 strava_redirect_uri: "https://warm-mandazi-6b7218.app/.netlify/functions/strava-auth"  # Use your Netlify function URL
 
 

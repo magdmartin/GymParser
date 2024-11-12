@@ -1,10 +1,8 @@
-const fetch = require("node-fetch");
+import fetch from 'node-fetch';
 
-exports.handler = async (event, context) => {
+export async function handler(event, context) {
   const clientId = process.env.STRAVA_CLIENT_ID;
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
-
-  // Extract the `code` parameter from the query string
   const code = event.queryStringParameters.code;
 
   // Exchange the authorization code for an access token
@@ -22,7 +20,6 @@ exports.handler = async (event, context) => {
   const data = await response.json();
 
   if (response.ok) {
-    // Successful authorization
     return {
       statusCode: 200,
       headers: { "Content-Type": "text/html" },
@@ -37,7 +34,6 @@ exports.handler = async (event, context) => {
       `
     };
   } else {
-    // Authorization failed
     return {
       statusCode: response.status,
       body: JSON.stringify({ error: data })

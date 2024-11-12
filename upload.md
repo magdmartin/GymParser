@@ -26,6 +26,39 @@ Then select your image for upload
 <div id="result"></div>
 
 <script>
+  // Function to fetch the Strava client ID securely from Netlify function
+  async function fetchClientId() {
+    try {
+      const response = await fetch('/.netlify/functions/get-strava-client-id');
+      const data = await response.json();
+
+      if (response.ok && data.clientId) {
+        return data.clientId;
+      } else {
+        throw new Error("Failed to fetch client ID");
+      }
+    } catch (error) {
+      console.error("Error fetching client ID:", error);
+      document.getElementById('result').innerText = "Error fetching Strava client ID.";
+    }
+  }
+
+  // Function to initiate Strava authorization
+  async function authorizeWithStrava() {
+    const clientId = await fetchClientId();
+    if (!clientId) {
+      document.getElementById('result').innerText = "Strava Client ID is missing.";
+      return;
+    }
+
+    const redirectUri = encodeURIComponent("https://warm-mandazi-6b7218.netlify.app/.netlify/functions/strava-auth");
+    const scope = "activity:write,read_all";
+
+    // Generate Strava authorization URL with the fetched client ID
+    const authUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scope}`;
+    window.location.href = authUrl;
+  }
+
   // Check URL for access token and store it in localStorage
   window.onload = function() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -35,6 +68,7 @@ Then select your image for upload
       window.history.replaceState({}, document.title, "/upload"); // Clean the URL
     }
   };
+
 
   async function uploadImage() {
     const imageInput = document.getElementById('imageInput').files[0];

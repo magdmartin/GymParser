@@ -5,8 +5,14 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 exports.handler = async (event) => {
   try {
+    // Parse the request body to get imageUrl and accessToken
     const { imageUrl, accessToken } = JSON.parse(event.body);
 
+    // Log received values to debug
+    console.log("Received imageUrl:", imageUrl);
+    console.log("Received accessToken:", accessToken);
+
+    // Check if imageUrl is provided
     if (!imageUrl) {
       return {
         statusCode: 400,
@@ -16,11 +22,15 @@ exports.handler = async (event) => {
 
     // Process the image with OpenAI
     const stravaData = await generateStravaApiCall(imageUrl);
+    
+    // Log the result of OpenAI processing
+    console.log("Generated Strava data:", stravaData);
 
+    // If stravaData was successfully generated, send to Strava
     if (stravaData) {
-      // Send the activity data to Strava
       const stravaResponse = await sendToStrava(stravaData, accessToken);
 
+      // Return success response with Strava's response data
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -29,12 +39,15 @@ exports.handler = async (event) => {
         }),
       };
     } else {
+      // If stravaData generation failed, return an error
       return {
         statusCode: 500,
         body: JSON.stringify({ error: "Failed to process image with OpenAI" }),
       };
     }
   } catch (error) {
+    // Log and return any unexpected error during processing
+    console.error("Error during processing:", error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: `Processing error: ${error.message}` }),
@@ -65,48 +78,61 @@ async function generateStravaApiCall(imageUrl) {
     max_tokens: 300,
   };
 
-  const response = await axios.post(
-    "https://api.openai.com/v1/chat/completions",
-    payload,
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-    }
-  );
+  try {
+    const response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+      }
+    );
 
-  if (response.status === 200) {
-    const responseText = response.data.choices[0].message.content;
+    // Check if the response is successful and parse the data
+    if (response.status === 200) {
+      const responseText = response.data.choices[0].message.content;
 
-    // Extract JSON payload from response text
-    const jsonMatch = responseText.match(/\{.*\}/s);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      // Extract JSON payload from response text
+      const jsonMatch = responseText.match(/\{.*\}/s);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      } else {
+        console.error("Failed to extract JSON from OpenAI response.");
+        return null;
+      }
     } else {
-      console.error("Failed to extract JSON from OpenAI response.");
+      console.error("Error from OpenAI API:", response.status, response.data);
       return null;
     }
-  } else {
-    console.error("Error from OpenAI API:", response.status, response.data);
+  } catch (error) {
+    console.error("Error calling OpenAI API:", error);
     return null;
   }
 }
 
 async function sendToStrava(stravaData, accessToken) {
   const stravaUrl = "https://www.strava.com/api/v3/activities";
-  const response = await axios.post(stravaUrl, stravaData, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
 
-  if (response.status === 201) {
-    return response.data;
-  } else {
-    console.error("Error from Strava API:", response.status, response.data);
-    throw new Error(`Strava API error: ${response.status}`);
+  try {
+    const response = await axios.post(stravaUrl, stravaData, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    // Check if the response is successful
+    if (response.status === 201) {
+      return response.data;
+    } else {
+      console.error("Error from Strava API:", response.status, response.data);
+      throw new Error(`Strava API error: ${response.status}`);
+    }
+  } catch (error) {
+    console.error("Error sending data to Strava:", error);
+    throw error;
   }
 }
 

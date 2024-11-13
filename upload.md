@@ -77,7 +77,7 @@ title: Upload
       if (imgbbData.success) {
         const uploadedImageUrl = imgbbData.data.url;
         
-        // Print the Strava token and image URL to the result div
+        // Display the Strava token and image URL to the result div
         document.getElementById('result').innerText = `Strava Access Token: ${accessToken}\nImage URL: ${uploadedImageUrl}`;
 
         // Call processImage function to further process the image
@@ -91,7 +91,7 @@ title: Upload
     }
   }
 
-  // Function to process the image through the Netlify Python function
+  // Function to process the image through the Netlify function
   async function processImage(imageUrl, accessToken) {
     try {
       const response = await fetch('/.netlify/functions/process-image', {
@@ -101,7 +101,14 @@ title: Upload
       });
 
       const result = await response.json();
-      document.getElementById('result').innerText += `\nProcessing result: ${JSON.stringify(result.strava_data, null, 2)}`;
+      if (result.activity_url) {
+        document.getElementById('result').innerHTML += `
+          <p>${result.message}</p>
+          <p><a href="${result.activity_url}" target="_blank">View your activity on Strava</a></p>
+        `;
+      } else {
+        document.getElementById('result').innerText += "\nError: " + (result.error || "Unknown error occurred.");
+      }
     } catch (error) {
       console.error("Error processing image:", error);
       document.getElementById('result').innerText += "\nError occurred during image processing.";

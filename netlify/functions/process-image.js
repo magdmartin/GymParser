@@ -5,14 +5,11 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 exports.handler = async (event) => {
   try {
-    // Parse the request body to get imageUrl and accessToken
     const { imageUrl, accessToken } = JSON.parse(event.body);
 
-    // Log received values to debug
     console.log("Received imageUrl:", imageUrl);
     console.log("Received accessToken:", accessToken);
 
-    // Check if imageUrl is provided
     if (!imageUrl) {
       return {
         statusCode: 400,
@@ -20,33 +17,33 @@ exports.handler = async (event) => {
       };
     }
 
-    // Process the image with OpenAI
     const stravaData = await generateStravaApiCall(imageUrl);
-    
-    // Log the result of OpenAI processing
     console.log("Generated Strava data:", stravaData);
 
-    // If stravaData was successfully generated, send to Strava
     if (stravaData) {
       const stravaResponse = await sendToStrava(stravaData, accessToken);
 
-      // Return success response with Strava's response data
+      // Extract the activity ID from Strava's response
+      const activityId = stravaResponse.id;
+
+      // Build a link to the new activity
+      const activityUrl = `https://www.strava.com/activities/${activityId}`;
+
       return {
         statusCode: 200,
         body: JSON.stringify({
           message: "Image processed and activity created successfully on Strava",
           strava_response: stravaResponse,
+          activity_url: activityUrl,
         }),
       };
     } else {
-      // If stravaData generation failed, return an error
       return {
         statusCode: 500,
         body: JSON.stringify({ error: "Failed to process image with OpenAI" }),
       };
     }
   } catch (error) {
-    // Log and return any unexpected error during processing
     console.error("Error during processing:", error);
     return {
       statusCode: 500,
@@ -90,11 +87,9 @@ async function generateStravaApiCall(imageUrl) {
       }
     );
 
-    // Check if the response is successful and parse the data
     if (response.status === 200) {
       const responseText = response.data.choices[0].message.content;
 
-      // Extract JSON payload from response text
       const jsonMatch = responseText.match(/\{.*\}/s);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
@@ -123,7 +118,6 @@ async function sendToStrava(stravaData, accessToken) {
       },
     });
 
-    // Check if the response is successful
     if (response.status === 201) {
       return response.data;
     } else {

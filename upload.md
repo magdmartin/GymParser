@@ -42,7 +42,7 @@ title: Upload
     }
   };
 
-  // Function to upload image and print parameters
+  // Function to upload image to imgbb and then process it
   async function uploadImage() {
     const imageInput = document.getElementById('imageInput').files[0];
     if (!imageInput) {
@@ -79,12 +79,32 @@ title: Upload
         
         // Print the Strava token and image URL to the result div
         document.getElementById('result').innerText = `Strava Access Token: ${accessToken}\nImage URL: ${uploadedImageUrl}`;
+
+        // Call processImage function to further process the image
+        await processImage(uploadedImageUrl, accessToken);
       } else {
         document.getElementById('result').innerText = "Error uploading image to imgbb.";
       }
     } catch (error) {
       console.error("Error uploading image:", error);
       document.getElementById('result').innerText = "Error occurred during upload.";
+    }
+  }
+
+  // Function to process the image through the Netlify Python function
+  async function processImage(imageUrl, accessToken) {
+    try {
+      const response = await fetch('/.netlify/functions/process_image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl, accessToken })
+      });
+
+      const result = await response.json();
+      document.getElementById('result').innerText += `\nProcessing result: ${JSON.stringify(result.strava_data, null, 2)}`;
+    } catch (error) {
+      console.error("Error processing image:", error);
+      document.getElementById('result').innerText += "\nError occurred during image processing.";
     }
   }
 </script>

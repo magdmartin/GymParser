@@ -6,3 +6,5 @@ vendor
 
 # Local Netlify folder
 .netlify
+.env
+node_modules/

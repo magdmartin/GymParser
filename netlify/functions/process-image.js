@@ -1,7 +1,7 @@
 // netlify/functions/process-image.js
-const fetch = require("node-fetch");
+import fetch from 'node-fetch';
 
-exports.handler = async (event) => {
+export async function handler(event) {
   try {
     const { imageUrl, accessToken } = JSON.parse(event.body);
 
@@ -10,17 +10,17 @@ exports.handler = async (event) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,  // Ensure this is set in Netlify env variables
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`, // Ensure this is set in Netlify env variables
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Replace with actual model if different
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "user",
             content: [
               {
                 "type": "text",
-                "text": "This is a picture of a workout machine, the distance is in km. Determine what type of workout it is between treadmill and rowing machine. Extract the distance, calories, time, and any other relevant information. The results should be an API call that can be sent to Strava to create an activity."
+                "text": "This is a picture of a workout machine, the distance is in km. Extract the distance, calories, time, and other relevant information."
               },
               {
                 "type": "image_url",
@@ -40,14 +40,13 @@ exports.handler = async (event) => {
     }
 
     const parsedData = await openAiResponse.json();
-    console.log("OpenAI Response:", parsedData);
 
-    // Step 2: Format parsed data for Strava API (example response structure may vary)
+    // Step 2: Format parsed data for Strava API
     const activityData = {
       name: parsedData.name || "Workout",
       type: parsedData.type || "Workout",
-      distance: parsedData.distance || 1000,  // Ensure this is in meters for Strava API
-      elapsed_time: parsedData.elapsed_time || 1800, // Time in seconds
+      distance: parsedData.distance || 1000,  // in meters
+      elapsed_time: parsedData.elapsed_time || 1800, // in seconds
       description: parsedData.description || "Workout session from image parsing",
     };
 
@@ -80,5 +79,5 @@ exports.handler = async (event) => {
       body: JSON.stringify({ error: error.message })
     };
   }
-};
+}
 

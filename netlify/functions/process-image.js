@@ -1,83 +1,112 @@
 // netlify/functions/process-image.js
-import fetch from 'node-fetch';
 
-export async function handler(event) {
+const axios = require("axios");
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+exports.handler = async (event) => {
   try {
     const { imageUrl, accessToken } = JSON.parse(event.body);
 
-    // Step 1: Send image to OpenAI for processing
-    const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`, // Ensure this is set in Netlify env variables
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                "type": "text",
-                "text": "This is a picture of a workout machine, the distance is in km. Extract the distance, calories, time, and other relevant information."
-              },
-              {
-                "type": "image_url",
-                "image_url": {
-                  "url": imageUrl
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 300,
-      })
-    });
-
-    if (!openAiResponse.ok) {
-      throw new Error("Error from OpenAI API");
+    if (!imageUrl) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Missing image URL" }),
+      };
     }
 
-    const parsedData = await openAiResponse.json();
+    // Process the image with OpenAI
+    const stravaData = await generateStravaApiCall(imageUrl);
 
-    // Step 2: Format parsed data for Strava API
-    const activityData = {
-      name: parsedData.name || "Workout",
-      type: parsedData.type || "Workout",
-      distance: parsedData.distance || 1000,  // in meters
-      elapsed_time: parsedData.elapsed_time || 1800, // in seconds
-      description: parsedData.description || "Workout session from image parsing",
-    };
+    if (stravaData) {
+      // Send the activity data to Strava
+      const stravaResponse = await sendToStrava(stravaData, accessToken);
 
-    // Step 3: Post data to Strava API
-    const stravaResponse = await fetch("https://www.strava.com/api/v3/activities", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(activityData)
-    });
-
-    if (!stravaResponse.ok) {
-      throw new Error("Error posting to Strava API");
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          message: "Image processed and activity created successfully on Strava",
+          strava_response: stravaResponse,
+        }),
+      };
+    } else {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Failed to process image with OpenAI" }),
+      };
     }
-
-    const stravaResult = await stravaResponse.json();
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        message: "Activity successfully created on Strava!",
-        data: stravaResult,
-      })
-    };
   } catch (error) {
-    console.error("Error in process-image function:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: `Processing error: ${error.message}` }),
     };
+  }
+};
+
+async function generateStravaApiCall(imageUrl) {
+  const payload = {
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "This is a picture of a workout machine, the distance is in km. Use the image metadata to determine the start_date_local. Extract only available information including activity type (run or rowing), distance, elapse time, and any other relevant information in the comment. Provide a formatted JSON payload that can be sent to Strava to create an activity (https://developers.strava.com/docs/reference/#api-Activities-createActivity). Your answer should only contain the JSON",
+          },
+          {
+            type: "image_url",
+            image_url: {
+              url: imageUrl,
+            },
+          },
+        ],
+      },
+    ],
+    max_tokens: 300,
+  };
+
+  const response = await axios.post(
+    "https://api.openai.com/v1/chat/completions",
+    payload,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+    }
+  );
+
+  if (response.status === 200) {
+    const responseText = response.data.choices[0].message.content;
+
+    // Extract JSON payload from response text
+    const jsonMatch = responseText.match(/\{.*\}/s);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    } else {
+      console.error("Failed to extract JSON from OpenAI response.");
+      return null;
+    }
+  } else {
+    console.error("Error from OpenAI API:", response.status, response.data);
+    return null;
+  }
+}
+
+async function sendToStrava(stravaData, accessToken) {
+  const stravaUrl = "https://www.strava.com/api/v3/activities";
+  const response = await axios.post(stravaUrl, stravaData, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (response.status === 201) {
+    return response.data;
+  } else {
+    console.error("Error from Strava API:", response.status, response.data);
+    throw new Error(`Strava API error: ${response.status}`);
   }
 }
 

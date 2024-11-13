@@ -94,7 +94,7 @@ title: Upload
   // Function to process the image through the Netlify Python function
   async function processImage(imageUrl, accessToken) {
     try {
-      const response = await fetch('/.netlify/functions/process_image', {
+      const response = await fetch('/.netlify/functions/process-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl, accessToken })
